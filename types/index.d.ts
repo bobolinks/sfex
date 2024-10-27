@@ -98,10 +98,19 @@ type Logger = {
 
 declare const logger: Logger;
 
+declare type Options = {
+  /** fs root */
+  fsroot?: string;
+  sites: Record<string, string>;
+  /** websocket for admin */
+  ws: boolean;
+  wsMethods: RpcModule;
+};
+
 declare function main<T extends ArgsSfex<any>>(
   env: Environment<T>,
   methods: Record<string, RpcMethod>,
-  sites?: Record<string, string>,
+  options?: Partial<Options>,
 ): Promise<any>;
 
 declare const expr: express.Express;
