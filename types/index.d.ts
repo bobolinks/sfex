@@ -107,6 +107,8 @@ declare type Options = {
   wsMethods: RpcModule;
 };
 
+declare function notify(method: string, ...params: any[]): boolean;
+
 declare function main<T extends ArgsSfex<any>>(
   env: Environment<T>,
   methods: Record<string, RpcMethod>,
