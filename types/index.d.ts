@@ -117,3 +117,15 @@ declare function main<T extends ArgsSfex<any>>(
 
 declare const expr: express.Express;
 
+/* eslint-disable @typescript-eslint/triple-slash-reference */
+/// <reference path='./codec.d.ts' />
+/// <reference path='./configurable.d.ts' />
+/// <reference path='./decorator.d.ts' />
+/// <reference path='./event.d.ts' />
+/// <reference path='./fs.d.ts' />
+/// <reference path='./is.d.ts' />
+/// <reference path='./logger.d.ts' />
+/// <reference path='./proxiable.d.ts' />
+/// <reference path='./queue.d.ts' />
+/// <reference path='./sys.d.ts' />
+/// <reference path='./taskable.d.ts' />
