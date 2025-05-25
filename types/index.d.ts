@@ -164,6 +164,8 @@ declare type EventListener<TEventData, TEventType extends string, TTarget> = (ev
    * @param listener The function that gets called when the event is fired.
    */
   addEventListener<T extends Extract<keyof TEventMap, string>>(type: T, listener: EventListener<TEventMap[T], T, this>): void;
+  on<T extends Extract<keyof TEventMap, string>>(type: T, listener: (event: TEventMap[T]) => void): void;
+  once<T extends Extract<keyof TEventMap, string>>(type: T, listener: (event: TEventMap[T]) => void): void;
   /**
    * Checks if listener is added to an event type.
    * @param type The type of event to listen to.
@@ -177,10 +179,19 @@ declare type EventListener<TEventData, TEventType extends string, TTarget> = (ev
    */
   removeEventListener<T extends Extract<keyof TEventMap, string>>(type: T, listener: EventListener<TEventMap[T], T, this>): void;
   /**
+   * Removes all listeners
+   */
+  clearEventListeners(): void;
+  /**
    * Fire an event type.
    * @param event The event that gets fired.
    */
   dispatchEvent<T extends Extract<keyof TEventMap, string>>(event: BaseEvent<T> & TEventMap[T]): void;
+  /**
+   * Fire an event type.
+   * @param event The event that gets fired.
+   */
+  emit<T extends Extract<keyof TEventMap, string>>(type: T, event?: TEventMap[T]): void;
 }
 
 //-------------------------------------------------------------

@@ -63,6 +63,16 @@ export class EventDispatcher<TEventMap extends {} = {}> {
       listeners[type].push(listener);
     }
   }
+  on<T extends Extract<keyof TEventMap, string>>(type: T, listener: (event: TEventMap[T]) => void): void {
+    return this.addEventListener(type, listener);
+  }
+  once<T extends Extract<keyof TEventMap, string>>(type: T, listener: (event: TEventMap[T]) => void): void {
+    const lis = (event: TEventMap[T]) => {
+      this.removeEventListener(type, lis);
+      listener.call(this, event);
+    };
+    return this.addEventListener(type, lis);
+  }
 
   /**
    * Checks if listener is added to an event type.
@@ -103,6 +113,15 @@ export class EventDispatcher<TEventMap extends {} = {}> {
   }
 
   /**
+   * Removes all listeners
+   */
+  clearEventListeners(): void {
+    if (Object.keys(this._listeners).length) {
+      this._listeners = {};
+    }
+  }
+
+  /**
    * Fire an event type.
    * @param event The event that gets fired.
    */
@@ -122,6 +141,25 @@ export class EventDispatcher<TEventMap extends {} = {}> {
       }
 
       (event as any).target = null;
+    }
+  }
+
+  /**
+   * Fire an event type.
+   * @param event The event that gets fired.
+   */
+  emit<T extends Extract<keyof TEventMap, string>>(type: T, event?: TEventMap[T]): void {
+    if (this._listeners === undefined) return;
+
+    const listeners = this._listeners;
+    const listenerArray = listeners[type];
+
+    if (listenerArray !== undefined) {
+      // Make a copy, in case listeners are removed while iterating.
+      const array = listenerArray.slice(0);
+      for (let i = 0, l = array.length; i < l; i++) {
+        array[i].call(this, event);
+      }
     }
   }
 }

@@ -501,16 +501,16 @@ async function dispWsMessage(socket, methods, msg) {
         socket.send(buffer);
     }
 }
-let adminWebSocket;
+let adminWebSockets = [];
 let msgid = 0;
 function notify(method, ...params) {
-    if (!adminWebSocket) {
+    if (!adminWebSockets.length) {
         return false;
     }
     // logger.debug(`notify with method[${method}], params[${JSON.stringify(params || '')}]`);
     const req = { jsonrpc: JSONRPC, isn: true, id: msgid++, method, params };
     const buffer = Codec.encode(req).final();
-    adminWebSocket.send(buffer);
+    adminWebSockets.forEach(e => e.send(buffer));
     return true;
 }
 async function main$1(env, methods, options) {
@@ -547,15 +547,14 @@ async function main$1(env, methods, options) {
             perMessageDeflate: false,
         });
         app.on('upgrade', (req, socket, head) => {
-            if (adminWebSocket) {
-                socket.destroy();
-                return;
-            }
             wss.handleUpgrade(req, socket, head, (webSocket) => {
-                adminWebSocket = webSocket;
+                adminWebSockets.push(webSocket);
                 webSocket.on('close', () => {
                     console.log(`websocket closed`);
-                    adminWebSocket = undefined;
+                    const index = adminWebSockets.indexOf(webSocket);
+                    if (index !== -1) {
+                        adminWebSockets.splice(index, 1);
+                    }
                 });
                 webSocket.on('data', (data) => {
                     dispWsMessage(webSocket, wsMethods, JSON.parse(data.toString()));
@@ -568,7 +567,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.1";
+var version = "0.0.2";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
@@ -779,6 +778,16 @@ class EventDispatcher {
             listeners[type].push(listener);
         }
     }
+    on(type, listener) {
+        return this.addEventListener(type, listener);
+    }
+    once(type, listener) {
+        const lis = (event) => {
+            this.removeEventListener(type, lis);
+            listener.call(this, event);
+        };
+        return this.addEventListener(type, lis);
+    }
     /**
      * Checks if listener is added to an event type.
      * @param type The type of event to listen to.
@@ -808,6 +817,14 @@ class EventDispatcher {
         }
     }
     /**
+     * Removes all listeners
+     */
+    clearEventListeners() {
+        if (Object.keys(this._listeners).length) {
+            this._listeners = {};
+        }
+    }
+    /**
      * Fire an event type.
      * @param event The event that gets fired.
      */
@@ -824,6 +841,23 @@ class EventDispatcher {
                 array[i].call(this, event);
             }
             event.target = null;
+        }
+    }
+    /**
+     * Fire an event type.
+     * @param event The event that gets fired.
+     */
+    emit(type, event) {
+        if (this._listeners === undefined)
+            return;
+        const listeners = this._listeners;
+        const listenerArray = listeners[type];
+        if (listenerArray !== undefined) {
+            // Make a copy, in case listeners are removed while iterating.
+            const array = listenerArray.slice(0);
+            for (let i = 0, l = array.length; i < l; i++) {
+                array[i].call(this, event);
+            }
         }
     }
 }

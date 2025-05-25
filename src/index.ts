@@ -150,17 +150,17 @@ type Options = {
   wsMethods: RpcModule;
 };
 
-let adminWebSocket: ws.WebSocket | undefined;
+let adminWebSockets: Array<ws.WebSocket> = [];
 let msgid = 0;
 
 export function notify(method: string, ...params: any[]) {
-  if (!adminWebSocket) {
+  if (!adminWebSockets.length) {
     return false;
   }
   // logger.debug(`notify with method[${method}], params[${JSON.stringify(params || '')}]`);
   const req: JsonRpcNotify = { jsonrpc: JSONRPC, isn: true, id: msgid++, method, params };
   const buffer = Codec.encode(req as any).final();
-  adminWebSocket.send(buffer);
+  adminWebSockets.forEach(e => e.send(buffer));
   return true;
 }
 
@@ -208,15 +208,14 @@ export async function main<T extends ArgsSfex<any>>(env: Environment<T>, methods
       perMessageDeflate: false,
     });
     app.on('upgrade', (req, socket, head: Buffer) => {
-      if (adminWebSocket) {
-        socket.destroy();
-        return;
-      }
       wss.handleUpgrade(req, socket, head, (webSocket) => {
-        adminWebSocket = webSocket;
+        adminWebSockets.push(webSocket);
         webSocket.on('close', () => {
           console.log(`websocket closed`);
-          adminWebSocket = undefined;
+          const index = adminWebSockets.indexOf(webSocket);
+          if (index !== -1) {
+            adminWebSockets.splice(index, 1);
+          }
         });
         webSocket.on('data', (data) => {
           dispWsMessage(webSocket, wsMethods, JSON.parse(data.toString()) as any);
