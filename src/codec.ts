@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import * as Is from './is';
 
 /**
@@ -18,6 +17,8 @@ enum TagCode {
   colon = ':'.charCodeAt(0),
   one = '1'.charCodeAt(0),
 }
+
+const slash = '-'.charCodeAt(0);
 
 export type ValPrimeType = undefined | null | boolean | Uint8Array | number | bigint | string;
 export type ValDict = Record<string, ValPrimeType>;
@@ -128,9 +129,14 @@ export default {
         return r;
       },
       [TagCode.number]: () => {
-        const pose = buffer.indexOf(TagCode.end, cxt.pos);
+        let pose = buffer.indexOf(TagCode.end, cxt.pos);
         const { pos } = cxt;
         cxt.pos = pose + 1;
+        // 科学计数法 e-
+        if (buffer[cxt.pos] === slash) {
+          pose = buffer.indexOf(TagCode.end, cxt.pos);
+          cxt.pos = pose + 1;
+        }
         return parseFloat(textDecoder.decode(buffer.subarray(pos, pose)));
       },
       [TagCode.bigint]: () => {

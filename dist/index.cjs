@@ -77,7 +77,6 @@ function stringArray(value) {
     return array(value) && value.every(elem => string(elem));
 }
 
-/* eslint-disable @typescript-eslint/no-empty-function */
 /**
  * BinJson codec
  */
@@ -96,6 +95,7 @@ var TagCode;
     TagCode[TagCode["colon"] = ':'.charCodeAt(0)] = "colon";
     TagCode[TagCode["one"] = '1'.charCodeAt(0)] = "one";
 })(TagCode || (TagCode = {}));
+const slash = '-'.charCodeAt(0);
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8');
 class ScalableArray {
@@ -200,9 +200,14 @@ var Codec = {
                 return r;
             },
             [TagCode.number]: () => {
-                const pose = buffer.indexOf(TagCode.end, cxt.pos);
+                let pose = buffer.indexOf(TagCode.end, cxt.pos);
                 const { pos } = cxt;
                 cxt.pos = pose + 1;
+                // 科学计数法 e-
+                if (buffer[cxt.pos] === slash) {
+                    pose = buffer.indexOf(TagCode.end, cxt.pos);
+                    cxt.pos = pose + 1;
+                }
                 return parseFloat(textDecoder.decode(buffer.subarray(pos, pose)));
             },
             [TagCode.bigint]: () => {
@@ -569,7 +574,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.2";
+var version = "0.0.3";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";

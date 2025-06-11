@@ -273,3 +273,20 @@ declare class Sys<T extends SysStats = SysStats> extends Taskable<T> {
   fire<T extends any, R extends any = any>(name: string, params?: T): Promise<R>;
   taskMain(): Promise<void>;
 }
+
+//-------------------------------------------------------------
+declare type ValPrimeType = undefined | null | boolean | Uint8Array | number | bigint | string;
+declare type ValDict = Record<string, ValPrimeType>;
+declare type ValType = ValPrimeType | Array<ValPrimeType | ValDict> | Record<string, ValPrimeType | ValDict>;
+
+declare const textEncoder:TextEncoder;
+declare const textDecoder:TextDecoder;
+
+declare class ScalableArray {
+  final(): Uint8Array;
+}
+
+declare const codec: {
+  encode<T extends ValType>(object: T, out?: ScalableArray): ScalableArray;
+  decode<T extends ValType>(buffer: Uint8Array): T;
+}
