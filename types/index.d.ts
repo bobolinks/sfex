@@ -90,6 +90,7 @@ declare type Environment<T> = {
 };
 
 type Logger = {
+  enableLine: boolean;
   debug(message: any, ...args: any[]): void;
   info(message: any, ...args: any[]): void;
   warn(message: any, ...args: any[]): void;

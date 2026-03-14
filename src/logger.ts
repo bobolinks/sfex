@@ -29,16 +29,41 @@ export function init<T extends ArgsSfex<any>>(env: Environment<T>) {
 const log4js = Log4js.getLogger();
 
 export const logger = {
+  enableLine: false,
   debug(message: any, ...args: any[]) {
+    if (logger.enableLine) {
+      const stack: any = new Error().stack;
+      const callerLine = stack.split('\n')[2];
+      const prefix = callerLine.split('/').pop().trim();
+      message = `[${prefix}]${message}`;
+    }
     log4js.debug(message, ...args);
   },
   info(message: any, ...args: any[]) {
+    if (logger.enableLine) {
+      const stack: any = new Error().stack;
+      const callerLine = stack.split('\n')[2];
+      const prefix = callerLine.split('/').pop().trim();
+      message = `[${prefix}]${message}`;
+    }
     log4js.info(message, ...args);
   },
   warn(message: any, ...args: any[]) {
+    if (logger.enableLine) {
+      const stack: any = new Error().stack;
+      const callerLine = stack.split('\n')[2];
+      const prefix = callerLine.split('/').pop().trim();
+      message = `[${prefix}]${message}`;
+    }
     log4js.warn(message, ...args);
   },
   error(message: any, ...args: any[]) {
+    if (logger.enableLine) {
+      const stack: any = new Error().stack;
+      const callerLine = stack.split('\n')[2];
+      const prefix = callerLine.split('/').pop().trim();
+      message = `[${prefix}]${message}`;
+    }
     log4js.error(message, ...args);
   },
 };

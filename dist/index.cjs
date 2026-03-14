@@ -34,16 +34,41 @@ function init(env) {
 }
 const log4js = Log4js.getLogger();
 const logger = {
+    enableLine: false,
     debug(message, ...args) {
+        if (logger.enableLine) {
+            const stack = new Error().stack;
+            const callerLine = stack.split('\n')[2];
+            const prefix = callerLine.split('/').pop().trim();
+            message = `[${prefix}]${message}`;
+        }
         log4js.debug(message, ...args);
     },
     info(message, ...args) {
+        if (logger.enableLine) {
+            const stack = new Error().stack;
+            const callerLine = stack.split('\n')[2];
+            const prefix = callerLine.split('/').pop().trim();
+            message = `[${prefix}]${message}`;
+        }
         log4js.info(message, ...args);
     },
     warn(message, ...args) {
+        if (logger.enableLine) {
+            const stack = new Error().stack;
+            const callerLine = stack.split('\n')[2];
+            const prefix = callerLine.split('/').pop().trim();
+            message = `[${prefix}]${message}`;
+        }
         log4js.warn(message, ...args);
     },
     error(message, ...args) {
+        if (logger.enableLine) {
+            const stack = new Error().stack;
+            const callerLine = stack.split('\n')[2];
+            const prefix = callerLine.split('/').pop().trim();
+            message = `[${prefix}]${message}`;
+        }
         log4js.error(message, ...args);
     },
 };
@@ -574,7 +599,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.3";
+var version = "0.0.4";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
