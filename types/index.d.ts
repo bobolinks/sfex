@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import express from 'express';
+import { StringValue } from 'ms';
 
 declare interface ArgType<T = 'string' | 'boolean' | 'number', V = string | boolean | number> {
   /** default is string  */
@@ -99,16 +100,23 @@ type Logger = {
 
 declare const logger: Logger;
 
-declare type Options = {
+type Options = {
   /** fs root */
   fsroot?: string;
   sites: Record<string, string>;
   /** websocket for admin */
   ws: boolean;
   wsMethods: RpcModule;
+  /** authorization */
+  auth?: {
+    key: string;
+    excludes: Array<string>;
+  }
 };
 
 declare function notify(method: string, ...params: any[]): boolean;
+
+declare function sign(id: string, username: string, expiresIn?: StringValue): string;
 
 declare function main<T extends ArgsSfex<any>>(
   env: Environment<T>,

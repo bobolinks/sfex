@@ -6,6 +6,7 @@ var express = require('express');
 var ws = require('ws');
 var fileUpload = require('express-fileupload');
 var bodyParser = require('body-parser');
+var jwt = require('jsonwebtoken');
 var fs = require('fs');
 var Log4js = require('log4js');
 var minimist = require('minimist');
@@ -533,6 +534,7 @@ async function dispWsMessage(socket, methods, msg) {
         socket.send(buffer);
     }
 }
+const opts = { sites: {}, ws: false, wsMethods: {} };
 let adminWebSockets = [];
 let msgid = 0;
 function notify(method, ...params) {
@@ -545,9 +547,40 @@ function notify(method, ...params) {
     adminWebSockets.forEach(e => e.send(buffer));
     return true;
 }
+expr.all('*', (req, res, next) => {
+    if (!opts.auth) {
+        return next();
+    }
+    for (const rule of opts.auth.excludes) {
+        if (req.path.startsWith(rule)) {
+            return next();
+        }
+    }
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    if (!token) {
+        return res.sendStatus(401); // token not found
+    }
+    jwt.verify(token, opts.auth.key, (err, user) => {
+        if (err) {
+            return res.sendStatus(403); // token invalid
+        }
+        req.user = user;
+        next();
+    });
+});
+function sign(id, username, expiresIn) {
+    if (!opts.auth) {
+        return '';
+    }
+    const token = jwt.sign({ id, username }, opts.auth.key, { expiresIn: expiresIn || '1W' });
+    return token;
+}
 async function main$1(env, methods, options) {
     init(env);
-    const { ws: isWsEnable, fsroot } = options || { ws: false };
+    if (options)
+        Object.assign(opts, options);
+    const { ws: isWsEnable, fsroot } = opts;
     const { sites } = options || {};
     const wsMethods = (options || {}).wsMethods || methods;
     for (const [key, value] of Object.entries(sites || {})) {
@@ -599,7 +632,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.4";
+var version = "0.0.5";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
@@ -617,6 +650,7 @@ var dependencies = {
 	"express-formidable": "^1.2.0",
 	globby: "^11.0.4",
 	"html-parser": "^0.11.0",
+	jsonwebtoken: "^9.0.3",
 	log4js: "^6.4.0",
 	minimist: "^1.2.5",
 	"node-schedule": "^2.1.1",
@@ -633,6 +667,7 @@ var devDependencies = {
 	"@types/body-parser": "^1.19.1",
 	"@types/express": "^4.17.13",
 	"@types/express-fileupload": "^1.4.1",
+	"@types/jsonwebtoken": "^9.0.10",
 	"@types/minimist": "^1.2.2",
 	"@types/node": "^20.12.7",
 	"@types/node-schedule": "^2.1.6",
@@ -1116,6 +1151,7 @@ exports.parseArgs = parseArgs;
 exports.printHelp = printHelp;
 exports.proxiable = proxiable;
 exports.rawRpc = rawRpc;
+exports.sign = sign;
 exports.string = string;
 exports.stringArray = stringArray;
 exports.textDecoder = textDecoder;

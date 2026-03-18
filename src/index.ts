@@ -6,6 +6,8 @@ import http from 'http';
 import ws from 'ws';
 import fileUpload from 'express-fileupload';
 import bodyParser from 'body-parser';
+import jwt from 'jsonwebtoken';
+import { StringValue } from 'ms';
 import { init, logger } from './logger';
 import Codec from './codec';
 import Fs from './fs';
@@ -148,7 +150,14 @@ type Options = {
   /** websocket for admin */
   ws: boolean;
   wsMethods: RpcModule;
+  /** authorization */
+  auth?: {
+    key: string;
+    excludes: Array<string>;
+  }
 };
+
+const opts: Options = {sites:{}, ws: false, wsMethods: {}};
 
 let adminWebSockets: Array<ws.WebSocket> = [];
 let msgid = 0;
@@ -164,10 +173,47 @@ export function notify(method: string, ...params: any[]) {
   return true;
 }
 
+expr.all('*', (req, res, next) => {
+  if (!opts.auth) {
+    return next();
+  }
+  for(const rule of opts.auth.excludes) {
+    if (req.path.startsWith(rule)) {
+      return next();
+    }
+  }
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  if (!token) {
+    return res.sendStatus(401); // token not found
+  }
+  jwt.verify(token, opts.auth.key, (err, user) => {
+    if (err) {
+      return res.sendStatus(403); // token invalid
+    }
+    (req as any).user = user;
+    next();
+  });
+});
+
+export function sign(id: string, username: string, expiresIn?: StringValue): string {
+  if (!opts.auth) {
+    return '';
+  }
+  const token = jwt.sign(
+    { id, username },
+    opts.auth.key,
+    { expiresIn: expiresIn || '1W' }
+  );
+  return token;
+}
+
 export async function main<T extends ArgsSfex<any>>(env: Environment<T>, methods: RpcModule, options?: Partial<Options>): Promise<http.Server> {
   init(env);
 
-  const { ws: isWsEnable, fsroot } = options || { ws: false };
+  if (options) Object.assign(opts, options);
+
+  const { ws: isWsEnable, fsroot } = opts;
   const { sites } = options || {} as any;
   const wsMethods = (options || {}).wsMethods || methods;
 
