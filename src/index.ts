@@ -157,7 +157,7 @@ type Options = {
   }
 };
 
-const opts: Options = {sites:{}, ws: false, wsMethods: {}};
+const opts: Options = { sites: {}, ws: false, wsMethods: {} };
 
 let adminWebSockets: Array<ws.WebSocket> = [];
 let msgid = 0;
@@ -177,7 +177,7 @@ expr.all('*', (req, res, next) => {
   if (!opts.auth) {
     return next();
   }
-  for(const rule of opts.auth.excludes) {
+  for (const rule of opts.auth.excludes) {
     if (req.path.startsWith(rule)) {
       return next();
     }

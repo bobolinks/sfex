@@ -630,7 +630,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.5";
+var version = "0.0.6";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
