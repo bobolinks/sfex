@@ -31,7 +31,7 @@ expr.use(bodyParser.raw({ type: 'text/plain', limit: '100mb' }));
 expr.use(fileUpload());
 
 /** config express */
-expr.all('*', (req, res, next) => {
+expr.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length, Authorization, Accept,X-Requested-With');
   res.header('Access-Control-Allow-Methods', 'PUT,POST,GET,DELETE,OPTIONS');
@@ -173,7 +173,7 @@ export function notify(method: string, ...params: any[]) {
   return true;
 }
 
-expr.all('*', (req, res, next) => {
+expr.use((req, res, next) => {
   if (!opts.auth) {
     return next();
   }
@@ -223,13 +223,13 @@ export async function main<T extends ArgsSfex<any>>(env: Environment<T>, methods
 
   const app = expr.listen(env.args.port, () => {
 
-    dispMain(`/${env.name}/*`, expr, env, methods);
+    dispMain(`/${env.name}/:cmd`, expr, env, methods);
 
     if (fsroot) {
-      dispMain(`/fs/*`, expr, env, new Fs);
+      dispMain(`/fs/:cmd`, expr, env, new Fs);
     }
 
-    const { port } = app.address() as any;
+    const { port } = env.args;
 
     process.stdout.write(`[port=${port}]\n`);
 

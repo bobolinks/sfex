@@ -416,7 +416,7 @@ expr.use(bodyParser.raw({ type: 'application/octet-stream', limit: '100mb' }));
 expr.use(bodyParser.raw({ type: 'text/plain', limit: '100mb' }));
 expr.use(fileUpload());
 /** config express */
-expr.all('*', (req, res, next) => {
+expr.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length, Authorization, Accept,X-Requested-With');
     res.header('Access-Control-Allow-Methods', 'PUT,POST,GET,DELETE,OPTIONS');
@@ -547,7 +547,7 @@ function notify(method, ...params) {
     adminWebSockets.forEach(e => e.send(buffer));
     return true;
 }
-expr.all('*', (req, res, next) => {
+expr.use((req, res, next) => {
     if (!opts.auth) {
         return next();
     }
@@ -587,11 +587,11 @@ async function main$1(env, methods, options) {
         expr.use(`/${env.name}/${key}`, express.static(path.resolve(value)));
     }
     const app = expr.listen(env.args.port, () => {
-        dispMain(`/${env.name}/*`, expr, env, methods);
+        dispMain(`/${env.name}/:cmd`, expr, env, methods);
         if (fsroot) {
-            dispMain(`/fs/*`, expr, env, new default_1);
+            dispMain(`/fs/:cmd`, expr, env, new default_1);
         }
-        const { port } = app.address();
+        const { port } = env.args;
         process.stdout.write(`[port=${port}]\n`);
         app.setTimeout(120000);
         const interfaces = [];
@@ -632,7 +632,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.6";
+var version = "0.0.7";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
@@ -645,7 +645,7 @@ var scripts = {
 };
 var dependencies = {
 	"body-parser": "^1.19.0",
-	express: "^4.17.1",
+	express: "^5.2.1",
 	"express-fileupload": "^1.4.0",
 	"express-formidable": "^1.2.0",
 	globby: "^11.0.4",
