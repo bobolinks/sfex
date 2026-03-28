@@ -621,7 +621,7 @@ async function main$1(env, methods, options) {
                         adminWebSockets.splice(index, 1);
                     }
                 });
-                webSocket.on('data', (data) => {
+                webSocket.on('message', (data) => {
                     dispWsMessage(webSocket, wsMethods, JSON.parse(data.toString()));
                 });
             });
@@ -632,7 +632,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.7";
+var version = "0.0.8";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";

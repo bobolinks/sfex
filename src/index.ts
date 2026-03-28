@@ -263,7 +263,7 @@ export async function main<T extends ArgsSfex<any>>(env: Environment<T>, methods
             adminWebSockets.splice(index, 1);
           }
         });
-        webSocket.on('data', (data) => {
+        webSocket.on('message', (data) => {
           dispWsMessage(webSocket, wsMethods, JSON.parse(data.toString()) as any);
         });
       });
