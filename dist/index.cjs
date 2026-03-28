@@ -74,200 +74,6 @@ const logger = {
     },
 };
 
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
-/* eslint-disable @typescript-eslint/ban-types */
-/* eslint-disable @typescript-eslint/indent */
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-function boolean(value) {
-    return value === true || value === false;
-}
-function string(value) {
-    return typeof value === 'string' || value instanceof String;
-}
-function number(value) {
-    return typeof value === 'number' || value instanceof Number;
-}
-function error(value) {
-    return value instanceof Error;
-}
-function func(value) {
-    return typeof value === 'function';
-}
-function array(value) {
-    return Array.isArray(value);
-}
-function stringArray(value) {
-    return array(value) && value.every(elem => string(elem));
-}
-
-/**
- * BinJson codec
- */
-var TagCode;
-(function (TagCode) {
-    TagCode[TagCode["undefined"] = 'u'.charCodeAt(0)] = "undefined";
-    TagCode[TagCode["null"] = 'n'.charCodeAt(0)] = "null";
-    TagCode[TagCode["boolean"] = 'b'.charCodeAt(0)] = "boolean";
-    TagCode[TagCode["uint8Array"] = 'B'.charCodeAt(0)] = "uint8Array";
-    TagCode[TagCode["number"] = 'i'.charCodeAt(0)] = "number";
-    TagCode[TagCode["bigint"] = 'I'.charCodeAt(0)] = "bigint";
-    TagCode[TagCode["string"] = 's'.charCodeAt(0)] = "string";
-    TagCode[TagCode["object"] = 'd'.charCodeAt(0)] = "object";
-    TagCode[TagCode["array"] = 'a'.charCodeAt(0)] = "array";
-    TagCode[TagCode["end"] = 'e'.charCodeAt(0)] = "end";
-    TagCode[TagCode["colon"] = ':'.charCodeAt(0)] = "colon";
-    TagCode[TagCode["one"] = '1'.charCodeAt(0)] = "one";
-})(TagCode || (TagCode = {}));
-const slash = '-'.charCodeAt(0);
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder('utf-8');
-class ScalableArray {
-    offset = 0;
-    array = new Uint8Array(1024);
-    append(b) {
-        if (typeof b === 'string') {
-            b = textEncoder.encode(b);
-        }
-        if ((this.offset + b.length) >= this.array.length) {
-            const n = new Uint8Array(this.offset + b.length + 1024);
-            n.set(this.array);
-            this.array = n;
-        }
-        this.array.set(b, this.offset);
-        this.offset += b.length;
-    }
-    appendStringWithTag(s) {
-        const b = textEncoder.encode(s);
-        this.append(`s${b.length}:`);
-        this.append(b);
-    }
-    appendTag(b) {
-        if ((this.offset + 1) >= this.array.length) {
-            const n = new Uint8Array(this.offset + 1024);
-            n.set(this.array);
-            this.array = n;
-        }
-        this.array[this.offset] = b;
-        this.offset += 1;
-    }
-    final() {
-        return this.array.subarray(0, this.offset);
-    }
-}
-var Codec = {
-    encode(object, out) {
-        const buffer = out || new ScalableArray();
-        const type = typeof object;
-        const func = ({
-            string: (value) => buffer.appendStringWithTag(value),
-            number: (value) => buffer.append(`i${value}e`),
-            bigint: (value) => buffer.append(`I${value}e`),
-            boolean: (value) => buffer.append(`b${value ? 1 : 0}`),
-            undefined: () => buffer.appendTag(TagCode.undefined),
-            symbol: () => { },
-            object: (value) => {
-                if (value === null) {
-                    return buffer.appendTag(TagCode.null);
-                }
-                if (array(value)) {
-                    buffer.append(`a${value.length}:`);
-                    for (const item of value) {
-                        this.encode(item, buffer);
-                    }
-                }
-                else if (value instanceof Uint8Array) {
-                    buffer.append(`B${value.length}:`);
-                    buffer.append(value);
-                }
-                else {
-                    const keys = Object.keys(value);
-                    buffer.append(`d${keys.length}:`);
-                    for (const key of keys) {
-                        this.encode(key, buffer);
-                        const item = value[key];
-                        this.encode(item, buffer);
-                    }
-                }
-            },
-            function: () => { },
-        })[type];
-        if (func) {
-            func(object);
-        }
-        return buffer;
-    },
-    decode(buffer, cxt = { pos: 0 }) {
-        const t = buffer[cxt.pos++];
-        const f = ({
-            [TagCode.array]: () => {
-                const pose = buffer.indexOf(TagCode.colon, cxt.pos);
-                const size = parseInt(textDecoder.decode(buffer.subarray(cxt.pos, pose)), 10);
-                /** skip `${size}:` */
-                cxt.pos = pose + 1;
-                const r = [];
-                for (let i = 0; i < size; i++) {
-                    r.push(this.decode(buffer, cxt));
-                }
-                return r;
-            },
-            [TagCode.boolean]: () => buffer[cxt.pos++] === TagCode.one,
-            [TagCode.object]: () => {
-                const pose = buffer.indexOf(TagCode.colon, cxt.pos);
-                const size = parseInt(textDecoder.decode(buffer.subarray(cxt.pos, pose)), 10);
-                /** skip `${size}:` */
-                cxt.pos = pose + 1;
-                const r = {};
-                for (let i = 0; i < size; i++) {
-                    r[this.decode(buffer, cxt)] = this.decode(buffer, cxt);
-                }
-                return r;
-            },
-            [TagCode.number]: () => {
-                let pose = buffer.indexOf(TagCode.end, cxt.pos);
-                const { pos } = cxt;
-                cxt.pos = pose + 1;
-                // 科学计数法 e-
-                if (buffer[cxt.pos] === slash) {
-                    pose = buffer.indexOf(TagCode.end, cxt.pos);
-                    cxt.pos = pose + 1;
-                }
-                return parseFloat(textDecoder.decode(buffer.subarray(pos, pose)));
-            },
-            [TagCode.bigint]: () => {
-                const pose = buffer.indexOf(TagCode.end, cxt.pos);
-                const { pos } = cxt;
-                cxt.pos = pose + 1;
-                return BigInt(textDecoder.decode(buffer.subarray(pos, pose)));
-            },
-            [TagCode.null]: () => null,
-            [TagCode.string]: () => {
-                const pose = buffer.indexOf(TagCode.colon, cxt.pos);
-                const size = parseInt(textDecoder.decode(buffer.subarray(cxt.pos, pose)), 10);
-                const pos = pose + 1;
-                /** skip `${length}:.[length]` */
-                cxt.pos = pose + size + 1;
-                return textDecoder.decode(buffer.subarray(pos, pos + size));
-            },
-            [TagCode.uint8Array]: () => {
-                const pose = buffer.indexOf(TagCode.colon, cxt.pos);
-                const size = parseInt(textDecoder.decode(buffer.subarray(cxt.pos, pose)), 10);
-                const pos = pose + 1;
-                /** skip `${length}:.[length]` */
-                cxt.pos = pose + size + 1;
-                return buffer.subarray(pos, pos + size);
-            },
-            [TagCode.undefined]: () => undefined,
-        })[t];
-        if (!f) {
-            throw 'unkonwn encoding!';
-        }
-        return f();
-    },
-};
-
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -521,8 +327,7 @@ async function dispWsMessage(socket, methods, msg) {
             id: msg.id,
             result: rs ?? null,
         };
-        const buffer = Codec.encode(rsp).final();
-        socket.send(buffer);
+        socket.send(JSON.stringify(rsp, null, 0));
     }
     catch (e) {
         const rsp = {
@@ -530,8 +335,7 @@ async function dispWsMessage(socket, methods, msg) {
             id: msg.id,
             error: e.toString(),
         };
-        const buffer = Codec.encode(rsp).final();
-        socket.send(buffer);
+        socket.send(JSON.stringify(rsp, null, 0));
     }
 }
 const opts = { sites: {}, ws: false, wsMethods: {} };
@@ -543,8 +347,7 @@ function notify(method, ...params) {
     }
     // logger.debug(`notify with method[${method}], params[${JSON.stringify(params || '')}]`);
     const req = { jsonrpc: JSONRPC, isn: true, id: msgid++, method, params };
-    const buffer = Codec.encode(req).final();
-    adminWebSockets.forEach(e => e.send(buffer));
+    adminWebSockets.forEach(e => e.send(JSON.stringify(req, null, 0)));
     return true;
 }
 expr.use((req, res, next) => {
@@ -632,7 +435,7 @@ async function main$1(env, methods, options) {
 const JSONRPC = '2.0';
 
 var name = "sfex";
-var version = "0.0.8";
+var version = "0.0.9";
 var description = "service framework base on express";
 var author = "bobolinks";
 var license = "MIT";
@@ -752,6 +555,56 @@ function printHelp(argsAnno) {
     console.log(`${pkg.name} v${pkg.version}`);
     console.log(lines);
 }
+
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/indent */
+/* --------------------------------------------------------------------------------------------
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for license information.
+ * ------------------------------------------------------------------------------------------ */
+function boolean(value) {
+    return value === true || value === false;
+}
+function string(value) {
+    return typeof value === 'string' || value instanceof String;
+}
+function number(value) {
+    return typeof value === 'number' || value instanceof Number;
+}
+function error(value) {
+    return value instanceof Error;
+}
+function func(value) {
+    return typeof value === 'function';
+}
+function array(value) {
+    return Array.isArray(value);
+}
+function stringArray(value) {
+    return array(value) && value.every(elem => string(elem));
+}
+
+/**
+ * BinJson codec
+ */
+var TagCode;
+(function (TagCode) {
+    TagCode[TagCode["undefined"] = 'u'.charCodeAt(0)] = "undefined";
+    TagCode[TagCode["null"] = 'n'.charCodeAt(0)] = "null";
+    TagCode[TagCode["boolean"] = 'b'.charCodeAt(0)] = "boolean";
+    TagCode[TagCode["uint8Array"] = 'B'.charCodeAt(0)] = "uint8Array";
+    TagCode[TagCode["number"] = 'i'.charCodeAt(0)] = "number";
+    TagCode[TagCode["bigint"] = 'I'.charCodeAt(0)] = "bigint";
+    TagCode[TagCode["string"] = 's'.charCodeAt(0)] = "string";
+    TagCode[TagCode["object"] = 'd'.charCodeAt(0)] = "object";
+    TagCode[TagCode["array"] = 'a'.charCodeAt(0)] = "array";
+    TagCode[TagCode["end"] = 'e'.charCodeAt(0)] = "end";
+    TagCode[TagCode["colon"] = ':'.charCodeAt(0)] = "colon";
+    TagCode[TagCode["one"] = '1'.charCodeAt(0)] = "one";
+})(TagCode || (TagCode = {}));
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder('utf-8');
 
 // proxy
 const getProxyRawObject = Symbol('getProxyRawObject');

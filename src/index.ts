@@ -9,7 +9,6 @@ import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 import { StringValue } from 'ms';
 import { init, logger } from './logger';
-import Codec from './codec';
 import Fs from './fs';
 import { ArgsSfex, DispContext, Environment, JsonRpcMessage, JsonRpcNotify, JsonRpcResponse, RpcModule } from '../types';
 
@@ -130,16 +129,14 @@ async function dispWsMessage(socket: ws.WebSocket, methods: RpcModule, msg: Json
       id: msg.id,
       result: rs ?? null,
     };
-    const buffer = Codec.encode(rsp as any).final();
-    socket.send(buffer);
+    socket.send(JSON.stringify(rsp, null, 0));
   } catch (e: any) {
     const rsp: JsonRpcResponse = {
       jsonrpc: JSONRPC,
       id: msg.id,
       error: e.toString(),
     };
-    const buffer = Codec.encode(rsp as any).final();
-    socket.send(buffer);
+    socket.send(JSON.stringify(rsp, null, 0));
   }
 }
 
@@ -168,8 +165,7 @@ export function notify(method: string, ...params: any[]) {
   }
   // logger.debug(`notify with method[${method}], params[${JSON.stringify(params || '')}]`);
   const req: JsonRpcNotify = { jsonrpc: JSONRPC, isn: true, id: msgid++, method, params };
-  const buffer = Codec.encode(req as any).final();
-  adminWebSockets.forEach(e => e.send(buffer));
+  adminWebSockets.forEach(e => e.send(JSON.stringify(req, null, 0)));
   return true;
 }
 

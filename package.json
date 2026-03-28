@@ -1,6 +1,6 @@
 {
   "name": "sfex",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "service framework base on express",
   "author": "bobolinks",
   "license": "MIT",
